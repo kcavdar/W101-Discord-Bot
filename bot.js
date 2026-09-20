@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, EmbedBuilder, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ChannelType, SlashCommandBuilder } = require('discord.js');
 const schedule = require('node-schedule');
 const scraper = require('./scraper');
 
@@ -142,7 +142,7 @@ function startScheduler() {
 /**
  * Discord bot events
  */
-bot.on('ready', () => {
+bot.on('ready', async () => {
   console.log(`\n✅ Bot bağlandı: ${bot.user.tag}`);
   console.log(`📢 Bildirim kanalı: ${CONFIG.channelId}`);
   console.log(`⏱️ Kontrol aralığı: ${CONFIG.checkInterval} dakika\n`);
@@ -152,8 +152,57 @@ bot.on('ready', () => {
     startScheduler();
   }
 
+  // Register slash commands
+  try {
+    const commands = [
+      new SlashCommandBuilder()
+        .setName('test')
+        .setDescription('Test bildirim gönder - İndirim tespit edildi')
+    ];
+
+    await bot.application.commands.set(commands);
+    console.log('✅ Slash commands kaydedildi');
+  } catch (error) {
+    console.error('❌ Slash command kaydı başarısız:', error.message);
+  }
+
   // Set bot status
   bot.user.setActivity('Wizard101 Membership', { type: 'WATCHING' });
+});
+
+/**
+ * Handle slash commands
+ */
+bot.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand()) return;
+
+  if (interaction.commandName === 'test') {
+    try {
+      // Defer the reply
+      await interaction.deferReply({ ephemeral: true });
+
+      // Send test notification
+      const testMessage = `🧪 **Test Bildirim**\n\nBu bir test bildirim mesajıdır. Bot düzgün çalışıyor!\n\n✅ Discrod bağlantısı: Başarılı\n✅ Kanal bağlantısı: Başarılı\n✅ Bildirim sistemi: Çalışıyor`;
+      
+      await sendNotification(
+        '🎉 Wizard101 Membership İndirim Aktif!',
+        testMessage,
+        true
+      );
+
+      // Reply to user
+      await interaction.editReply({
+        content: '✅ Test bildirim gönderildi! Kanala bakın.'
+      });
+
+      console.log('🧪 Test bildirim gönderildi');
+    } catch (error) {
+      console.error('❌ Komut hatası:', error);
+      await interaction.editReply({
+        content: '❌ Hata oluştu: ' + error.message
+      });
+    }
+  }
 });
 
 bot.on('error', error => {
