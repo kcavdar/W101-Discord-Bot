@@ -1,0 +1,23 @@
+{
+  "name": "wizard101-membership-bot",
+  "version": "1.0.0",
+  "description": "Discord bot that notifies about Wizard101 membership discounts",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js"
+  },
+  "keywords": ["discord", "bot", "wizard101", "membership"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.14.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.3.1",
+    "node-schedule": "^2.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
