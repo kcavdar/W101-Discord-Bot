@@ -207,8 +207,8 @@ bot.on('interactionCreate', async (interaction) => {
     }
   } else if (interaction.commandName === 'check') {
     try {
-      // Defer the reply
-      await interaction.deferReply({ ephemeral: true });
+      // Defer the reply - PUBLIC, not ephemeral
+      await interaction.deferReply();
 
       // Send checking message
       await interaction.editReply({
@@ -220,7 +220,7 @@ bot.on('interactionCreate', async (interaction) => {
 
       if (result.error) {
         await interaction.editReply({
-          content: `❌ **Hata**: ${result.error}`
+          content: `❌ **Hata oluştu!**\n\`\`\`${result.error}\`\`\``
         });
         return;
       }
@@ -228,21 +228,25 @@ bot.on('interactionCreate', async (interaction) => {
       // Format response
       let responseMessage = '';
       if (result.hasDiscount) {
-        responseMessage = `✅ **İndirim Bulundu!**\n\n${scraper.formatDiscountMessage(result)}`;
+        responseMessage = `🎉 **İndirim Bulundu!**\n\n${scraper.formatDiscountMessage(result)}`;
       } else {
-        responseMessage = `ℹ️ **İndirim Yok**\n\nŞu anda Wizard101 membership'te aktif indirim yok.\n\n${scraper.formatDiscountMessage(result)}`;
+        responseMessage = `ℹ️ **Indirim Yok**\n\nŞu anda Wizard101 membership'te aktif bir indirim yok.\n\nSonraki otomatik kontrol: 24 saat sonra`;
       }
 
       await interaction.editReply({
         content: responseMessage
       });
 
-      console.log('✅ Manuel kontrol tamamlandı');
+      console.log('✅ Manuel kontrol tamamlandı - Indirim bulundu:', result.hasDiscount);
     } catch (error) {
-      console.error('❌ Komut hatası:', error);
-      await interaction.editReply({
-        content: '❌ Hata oluştu: ' + error.message
-      });
+      console.error('❌ /check komut hatası:', error);
+      try {
+        await interaction.editReply({
+          content: '❌ Kontrol sırasında hata oluştu: ' + error.message
+        });
+      } catch (e) {
+        console.error('❌ Reply gönderme başarısız:', e.message);
+      }
     }
   }
 });
