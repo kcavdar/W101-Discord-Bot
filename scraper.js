@@ -29,59 +29,67 @@ async function checkMembershipDiscount() {
     const currentStatus = {
       hasDiscount: false,
       discountInfo: '',
-      priceInfo: '',
-      lastChecked: new Date().toLocaleString('tr-TR'),
-      rawText: ''
+      membershipOptions: [],
+      lastChecked: new Date().toLocaleString('tr-TR')
     };
 
-    // Look for discount indicators in common HTML patterns
-    // Adjust selectors based on actual page structure
-    const pageText = $.text().toLowerCase();
-    currentStatus.rawText = pageText;
+    // Get page text to search for active discount keywords
+    const pageText = $.text();
+    const pageTextLower = pageText.toLowerCase();
 
-    // Check for common discount keywords
-    const discountKeywords = [
-      'discount',
-      'sale',
-      'off',
-      'indirim',
-      'özel fiyat',
-      'sınırlı zaman',
+    // Keywords that indicate ACTIVE discount (not just general mentions)
+    const activeDiscountKeywords = [
+      'special offer',
       'limited time',
-      'promotion',
-      'promosyon'
+      'limited time offer',
+      'limited time only',
+      'save',
+      'off',
+      '% off',
+      'sale',
+      'special price',
+      'promo',
+      'özet fiyat',
+      'sınırlı zaman',
+      'özel fiyat',
+      'tasarruf'
     ];
 
-    currentStatus.hasDiscount = discountKeywords.some(keyword => 
-      pageText.includes(keyword)
+    // Check for ACTIVE discount indicators
+    const hasActiveDiscount = activeDiscountKeywords.some(keyword => 
+      pageTextLower.includes(keyword)
     );
 
-    // Try to extract price information
-    const pricePattern = /\$?\d+(?:\.\d{2})?/g;
-    const prices = pageText.match(pricePattern);
-    if (prices) {
-      currentStatus.priceInfo = prices.slice(0, 5).join(', '); // Get first 5 prices
-    }
-
-    // Look for specific discount text
-    const discountSelectors = [
-      '.discount',
-      '.sale',
-      '.promo',
-      '[class*="discount"]',
-      '[class*="sale"]',
-      '[class*="promo"]',
-      '.price-tag',
-      '.special-offer'
-    ];
-
-    for (const selector of discountSelectors) {
-      const element = $(selector).text();
-      if (element) {
-        currentStatus.discountInfo = element.substring(0, 200);
-        break;
+    // Extract membership options with prices
+    const membershipPattern = /([A-Z\s]+(?:MONTH|YEAR|ANNUAL|FAMILY))\s*[^\d]*\$?([\d.]+)/gi;
+    let match;
+    const options = [];
+    
+    while ((match = membershipPattern.exec(pageText)) !== null) {
+      const type = match[1].trim();
+      const price = parseFloat(match[2]);
+      if (type && price && price > 0) {
+        options.push({
+          type: type,
+          price: price
+        });
       }
     }
+
+    // Remove duplicates
+    currentStatus.membershipOptions = [...new Map(
+      options.map(item => [item.type, item])
+    ).values()];
+
+    // Look for discount description near pricing
+    const discountElement = $('body').text().match(/(?:save|off|discount|special|limited time)[^.!?]*(?:\d+%|[^\n]*special[^\n]*)/gi);
+    if (discountElement && discountElement.length > 0) {
+      currentStatus.discountInfo = discountElement[0].trim().substring(0, 200);
+    }
+
+    currentStatus.hasDiscount = hasActiveDiscount && currentStatus.membershipOptions.length > 0;
+
+    console.log(`[Scraper] Discount found: ${currentStatus.hasDiscount}, Options: ${currentStatus.membershipOptions.length}`);
 
     // Compare with last status to detect changes
     const statusChanged = lastStatus.hasDiscount !== currentStatus.hasDiscount;
@@ -91,10 +99,9 @@ async function checkMembershipDiscount() {
     return {
       hasDiscount: currentStatus.hasDiscount,
       discountInfo: currentStatus.discountInfo,
-      priceInfo: currentStatus.priceInfo,
+      membershipOptions: currentStatus.membershipOptions,
       lastChecked: currentStatus.lastChecked,
-      statusChanged: statusChanged,
-      previousStatus: lastStatus.hasDiscount
+      statusChanged: statusChanged
     };
 
   } catch (error) {
@@ -123,13 +130,23 @@ function formatDiscountMessage(discountData) {
   }
 
   if (discountData.hasDiscount) {
-    return `✅ **Wizard101 Membership İndirim Var!**\n${
-      discountData.discountInfo ? `📢 ${discountData.discountInfo.substring(0, 150)}\n` : ''
-    }${
-      discountData.priceInfo ? `💰 Fiyatlar: ${discountData.priceInfo}\n` : ''
-    }Daha fazla bilgi: <${MEMBERSHIP_URL}>`;
+    let message = `✅ **Wizard101 Membership'te İndirim Aktif!**\n`;
+    
+    if (discountData.discountInfo) {
+      message += `\n📢 **İndirim Açıklaması:**\n${discountData.discountInfo}\n`;
+    }
+    
+    if (discountData.membershipOptions && discountData.membershipOptions.length > 0) {
+      message += `\n💰 **Membership Seçenekleri:**\n`;
+      discountData.membershipOptions.forEach(option => {
+        message += `  • ${option.type}: $${option.price.toFixed(2)}\n`;
+      });
+    }
+    
+    message += `\n🔗 Daha fazla bilgi: ${MEMBERSHIP_URL}`;
+    return message;
   } else {
-    return `ℹ️ Şu anda Wizard101 Membership'te aktif indirim yok.\nSonraki kontrol: ...`;
+    return `ℹ️ Şu anda Wizard101 Membership'te aktif indirim yok.\n\nNormal Fiyatlar:\n  • Family: $6.95/Ay\n  • 1 Ay: $9.95\n  • 6 Ay: $49.95\n  • 1 Yıl: $79.95`;
   }
 }
 
