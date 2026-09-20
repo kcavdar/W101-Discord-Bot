@@ -157,14 +157,16 @@ bot.on('ready', async () => {
     const commands = [
       new SlashCommandBuilder()
         .setName('test')
-        .setDescription('Test bildirim gönder - İndirim tespit edildi'),
+        .setDescription('Test bildirim gönder - İndirim tespit edildi')
+        .toJSON(),
       new SlashCommandBuilder()
         .setName('check')
         .setDescription('Wizard101 membership sayfasını şimdi kontrol et')
+        .toJSON()
     ];
 
     await bot.application.commands.set(commands);
-    console.log('✅ Slash commands kaydedildi');
+    console.log('✅ Slash commands kaydedildi - test, check');
   } catch (error) {
     console.error('❌ Slash command kaydı başarısız:', error.message);
   }
