@@ -157,7 +157,10 @@ bot.on('ready', async () => {
     const commands = [
       new SlashCommandBuilder()
         .setName('test')
-        .setDescription('Test bildirim gönder - İndirim tespit edildi')
+        .setDescription('Test bildirim gönder - İndirim tespit edildi'),
+      new SlashCommandBuilder()
+        .setName('check')
+        .setDescription('Wizard101 membership sayfasını şimdi kontrol et')
     ];
 
     await bot.application.commands.set(commands);
@@ -196,6 +199,45 @@ bot.on('interactionCreate', async (interaction) => {
       });
 
       console.log('🧪 Test bildirim gönderildi');
+    } catch (error) {
+      console.error('❌ Komut hatası:', error);
+      await interaction.editReply({
+        content: '❌ Hata oluştu: ' + error.message
+      });
+    }
+  } else if (interaction.commandName === 'check') {
+    try {
+      // Defer the reply
+      await interaction.deferReply({ ephemeral: true });
+
+      // Send checking message
+      await interaction.editReply({
+        content: '🔍 Wizard101 sayfası kontrol ediliyor...'
+      });
+
+      // Run membership check
+      const result = await scraper.checkMembershipDiscount();
+
+      if (result.error) {
+        await interaction.editReply({
+          content: `❌ **Hata**: ${result.error}`
+        });
+        return;
+      }
+
+      // Format response
+      let responseMessage = '';
+      if (result.hasDiscount) {
+        responseMessage = `✅ **İndirim Bulundu!**\n\n${scraper.formatDiscountMessage(result)}`;
+      } else {
+        responseMessage = `ℹ️ **İndirim Yok**\n\nŞu anda Wizard101 membership'te aktif indirim yok.\n\n${scraper.formatDiscountMessage(result)}`;
+      }
+
+      await interaction.editReply({
+        content: responseMessage
+      });
+
+      console.log('✅ Manuel kontrol tamamlandı');
     } catch (error) {
       console.error('❌ Komut hatası:', error);
       await interaction.editReply({
